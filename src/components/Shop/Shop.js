@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import './Shop.css';
 import Product from '../Product/Product';
+import Cart from '../Cart/Cart';
+import { addToDb, getShoppingCart } from '../../utilities/fakedb';
 const Shop = () => {
     const [products, setProducts] = useState([]);
     const [carts, setCarts] = useState([]);
@@ -10,12 +12,37 @@ const Shop = () => {
             .then(data => setProducts(data))
     }, []);
 
-    const addToCart = product => {
-        const newCart = [...carts, product];
+    useEffect(() => {
+        const storedCart = getShoppingCart();
+        const savedCart = [];
+        //console.log(storedCart);
+        for (const id in storedCart) {
+            const addProduct = products.find(product => product.id === id);
+            if (addProduct) {
+                const quantity = storedCart[id];
+                addProduct.quantity = quantity;
+                savedCart.push(addProduct);
+            }
+        }
+        setCarts(savedCart);
+    }, [products]);
+
+    const addToCart = selectedProduct => {
+        let newCart = [];
+        const exits = carts.find(product => product.id === selectedProduct.id);
+        if (!exits) {
+            selectedProduct.quantity = 1;
+            newCart = [...carts, selectedProduct];
+        }
+        else {
+            exits.quantity++;
+            const rest = carts.filter(product => product.id !== selectedProduct.id);
+            newCart = [...rest, exits];
+        }
         setCarts(newCart);
+        addToDb(selectedProduct.id);
     }
-    const reducers = (x, y) => x + y.price;
-    const total = carts.reduce(reducers, 0);
+
 
     return (
         <div>
@@ -30,9 +57,7 @@ const Shop = () => {
                     }
                 </div>
                 <div className='cart-container'>
-                    <h4>Order Summary</h4>
-                    <p>Selected Item : {carts.length}</p>
-                    <p>Total : ${total}</p>
+                    <Cart carts={carts}></Cart>
                 </div>
             </div>
         </div>
